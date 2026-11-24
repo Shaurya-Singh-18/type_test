@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AZType — Blind Touch-Typing Speed Trainer</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            surface: {
+              950: '#0b0d11',
+              900: '#11141b',
+              850: '#161a23',
+              800: '#1d222e',
+              700: '#282f3f',
+            },
+            accent: {
+              DEFAULT: '#e2b714',
+              hover: '#f0c829',
+              dim: 'rgba(226, 183, 20, 0.14)',
+            },
+            success: {
+              DEFAULT: '#34d399',
+              dim: 'rgba(52, 211, 153, 0.14)',
+            },
+            danger: {
+              DEFAULT: '#f87171',
+              dim: 'rgba(248, 113, 113, 0.16)',
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* Custom subtle animations and scrollbar styling */
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-5px); }
+      40% { transform: translateX(5px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.92); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    @keyframes pulseRing {
+      0% { box-shadow: 0 0 0 0 rgba(226, 183, 20, 0.45); }
+      70% { box-shadow: 0 0 0 8px rgba(226, 183, 20, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(226, 183, 20, 0); }
+    }
+
+    .animate-shake {
+      animation: shake 0.28s cubic-bezier(.36,.07,.19,.97) both;
+    }
+
+    .animate-pop {
+      animation: popIn 0.2s ease-out forwards;
+    }
+
+    .active-letter-ring {
+      animation: pulseRing 1.8s infinite;
+    }
+
+    /* Custom sleek scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #11141b;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #282f3f;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3b445b;
+    }
+
+    /* Prevent double-tap zoom on mobile interactive buttons */
+    button {
+      touch-action: manipulation;
+    }
+  </style>
+</head>
+<body class="bg-surface-950 text-slate-200 font-sans min-h-screen flex flex-col selection:bg-accent selection:text-surface-950">
+
+  <!-- Top Navigation Header -->
+  <header class="border-b border-surface-800 bg-surface-900/80 backdrop-blur-md sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-accent/15 border border-accent/30 flex items-center justify-center text-accent font-mono font-bold text-lg shadow-inner">
+          AZ
+        </div>
+        <div>
+          <h1 class="font-bold text-base sm:text-lg tracking-tight text-white flex items-center gap-2">
+            AZType
+            <span class="hidden sm:inline-block text-[11px] font-mono font-medium px-2 py-0.5 rounded-full bg-surface-800 text-slate-400 border border-surface-700">
+              A → Z Blind Trainer
+            </span>
+          </h1>
+          <p class="text-xs text-slate-400 hidden md:block">Build muscle memory & finger speed from A to Z without looking</p>
+        </div>
+      </div>
+
+      <!-- Top Controls Bar -->
+      <div class="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
+        <!-- Mode Toggle (Standard vs Strict) -->
+        <div class="flex items-center bg-surface-850 p-1 rounded-xl border border-surface-800" title="Standard continues on errors; Strict resets to 'A' on any mistake">
+          <button id="btn-mode-standard" type="button" class="px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-surface-700 text-white shadow-sm">
+            Standard
+          </button>
+          <button id="btn-mode-strict" type="button" class="px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all text-slate-400 hover:text-slate-200">
+            Strict
+          </button>
+        </div>
+
+        <!-- Case Display Toggle (lowercase vs UPPERCASE) -->
+        <button id="btn-toggle-case" type="button" title="Toggle display case (both cases are accepted when typing)" class="px-3 py-2 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-800 text-xs font-mono font-semibold text-slate-300 transition-colors flex items-center gap-1.5">
+          <span id="case-label">a-z</span>
+        </button>
+
+        <!-- Blindfold / Hide Letters Mode -->
+        <button id="btn-toggle-blind" type="button" title="Blindfold Mode: Hide upcoming letters to test pure touch-typing memory" class="px-3 py-2 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-800 text-xs font-medium text-slate-300 transition-colors flex items-center gap-1.5">
+          <svg id="icon-eye-open" class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <span class="hidden sm:inline">Peek: On</span>
+        </button>
+
+        <!-- Tactile Sound Toggle -->
+        <button id="btn-toggle-sound" type="button" title="Toggle subtle mechanical key sound effects" class="p-2 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-800 text-slate-300 transition-colors" aria-label="Toggle Sound">
+          <svg id="icon-sound-on" class="w-4 h-4 text-accent hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
+          </svg>
+          <svg id="icon-sound-off" class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 lg:py-8 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+
+    <!-- LEFT / CENTER: Typing Arena (7 columns on large screens) -->
+    <section class="lg:col-span-7 xl:col-span-8 flex flex-col gap-6">
+
+      <!-- Status & Live Precision Stopwatch Card -->
+      <div class="bg-surface-900 border border-surface-800 rounded-2xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+        <!-- Subtle top progress bar -->
+        <div class="absolute top-0 left-0 right-0 h-1 bg-surface-800">
+          <div id="progress-bar" class="h-full bg-accent transition-all duration-100 ease-out" style="width: 0%;"></div>
+        </div>
+
+        <!-- Top Telemetry Row -->
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <div class="flex items-center gap-2.5">
+            <span id="status-dot" class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+            <span id="status-text" class="text-xs sm:text-sm font-medium text-slate-300">
+              Press <kbd class="px-1.5 py-0.5 text-xs font-mono bg-surface-800 border border-surface-700 rounded text-accent">A</kbd> to start timer
+            </span>
+          </div>
+
+          <div class="flex items-center gap-4 text-xs font-mono text-slate-400">
+            <div>
+              Progress: <span id="stat-progress" class="text-slate-200 font-semibold">0/26</span>
+            </div>
+            <div>
+              Errors: <span id="stat-errors" class="text-slate-200 font-semibold">0</span>
+            </div>
+            <div>
+              Speed: <span id="stat-live-cps" class="text-slate-200 font-semibold">0.0</span> <span class="text-slate-500">ch/s</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Giant High-Precision Stopwatch -->
+        <div class="flex flex-col items-center justify-center py-4 sm:py-6">
+          <div id="timer-display" class="font-mono text-5xl sm:text-7xl font-bold tracking-tight text-white tabular-nums transition-colors duration-150">
+            00.00<span class="text-2xl sm:text-3xl text-slate-500 font-normal">s</span>
+          </div>
+          <p id="sub-timer-hint" class="mt-2 text-xs sm:text-sm text-slate-400 text-center max-w-md">
+            Keep your eyes off the keyboard. Timer stops automatically on <span class="text-accent font-mono font-semibold">Z</span>.
+          </p>
+        </div>
+
+        <!-- Alphabet Grid Display -->
+        <div class="mt-4">
+          <div id="alphabet-grid" class="grid grid-cols-7 sm:grid-cols-9 md:grid-cols-13 gap-2 sm:gap-2.5 select-none" aria-label="Alphabet progress grid">
+            <!-- 26 Letter Tiles injected by JS -->
+          </div>
+        </div>
+
+        <!-- Mobile / Touch On-Screen Input Helper (for mobile devices without physical keyboard) -->
+        <div class="mt-6 sm:hidden">
+          <label for="mobile-typing-input" class="sr-only">Tap here to open mobile keyboard</label>
+          <input
+            id="mobile-typing-input"
+            type="text"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+            placeholder="Tap here if using a mobile keyboard..."
+            class="w-full px-4 py-3 rounded-xl bg-surface-850 border border-surface-700 text-sm font-mono text-center text-slate-200 placeholder-slate-500 focus:outline-none focus:border-accent"
+          />
+        </div>
+
+        <!-- Bottom Action & Shortcut Bar -->
+        <div class="mt-6 pt-5 border-t border-surface-800/80 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-3 text-xs text-slate-400">
+            <span class="flex items-center gap-1.5">
+              <kbd class="px-1.5 py-0.5 font-mono bg-surface-800 border border-surface-700 rounded text-slate-300">Esc</kbd>
+              or
+              <kbd class="px-1.5 py-0.5 font-mono bg-surface-800 border border-surface-700 rounded text-slate-300">Tab</kbd>
+              to reset
+            </span>
+          </div>
+
+          <button id="btn-reset" type="button" class="px-4 py-2 rounded-xl bg-surface-800 hover:bg-surface-700 active:scale-[0.98] text-slate-200 text-xs sm:text-sm font-medium transition-all flex items-center gap-2 border border-surface-700/70">
+            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+            </svg>
+            Reset Run
+          </button>
+        </div>
+      </div>
+
+      <!-- Post-Run Result Banner (Appears when Z is completed) -->
+      <div id="result-banner" class="hidden bg-gradient-to-r from-surface-900 via-surface-850 to-surface-900 border border-accent/40 rounded-2xl p-5 sm:p-6 shadow-lg animate-pop">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex items-start sm:items-center gap-4">
+            <div id="result-badge-icon" class="w-12 h-12 rounded-2xl bg-success/15 border border-success/30 flex items-center justify-center text-success shrink-0">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h2 id="result-title" class="text-base sm:text-lg font-bold text-white">Run Complete!</h2>
+                <span id="pb-pill" class="hidden px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-accent text-surface-950">
+                  NEW PERSONAL BEST
+                </span>
+              </div>
+              <p id="result-summary" class="text-xs sm:text-sm text-slate-300 mt-1 font-mono">
+                Finished in 00.00s • 100% accuracy • 0.0 chars/sec
+              </p>
+            </div>
+          </div>
+
+          <button id="btn-next-run" type="button" class="px-4 py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-surface-950 font-semibold text-xs sm:text-sm transition-colors shrink-0 shadow-md">
+            Go Again (Enter)
+          </button>
+        </div>
+      </div>
+
+      <!-- Touch Typing Finger Guide Card -->
+      <div class="bg-surface-900/60 border border-surface-800/80 rounded-2xl p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+            <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
+            </svg>
+            Blind Typing Technique Tips
+          </h3>
+          <span class="text-[11px] font-mono text-slate-500">Home Row: ASDF • JKL;</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-400">
+          <div class="bg-surface-850/70 p-3 rounded-xl border border-surface-800">
+            <span class="text-slate-200 font-semibold block mb-1">1. Anchor Index Fingers</span>
+            Feel the raised tactile bumps on <kbd class="text-accent font-mono">F</kbd> and <kbd class="text-accent font-mono">J</kbd> before starting your run.
+          </div>
+          <div class="bg-surface-850/70 p-3 rounded-xl border border-surface-800">
+            <span class="text-slate-200 font-semibold block mb-1">2. Prioritize Rhythm</span>
+            Smooth, steady keystrokes beat frantic bursts. Accuracy builds speed naturally.
+          </div>
+          <div class="bg-surface-850/70 p-3 rounded-xl border border-surface-800">
+            <span class="text-slate-200 font-semibold block mb-1">3. Don't Look Down</span>
+            Use <span class="text-slate-200 font-medium">Peek: Off</span> once comfortable to force pure finger recall.
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- RIGHT SIDEBAR: Improvement Catalogue & History (5 columns on large screens) -->
+    <aside class="lg:col-span-5 xl:col-span-4 bg-surface-900 border border-surface-800 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col gap-5">
+      
+      <!-- Catalogue Header -->
+      <div class="flex items-center justify-between gap-2">
+        <div>
+          <h2 class="text-base font-bold text-white flex items-center gap-2">
+            <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+            </svg>
+            Improvement Catalogue
+          </h2>
+          <p class="text-xs text-slate-400">Your recorded A–Z runs & speed progression</p>
+        </div>
+
+        <div class="flex items-center gap-1.5">
+          <button id="btn-export-csv" type="button" title="Export history to CSV" class="p-2 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-800 text-slate-400 hover:text-slate-200 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+          </button>
+          <button id="btn-clear-history" type="button" title="Clear all history" class="p-2 rounded-xl bg-surface-850 hover:bg-danger/15 border border-surface-800 hover:border-danger/30 text-slate-400 hover:text-danger transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Summary Metrics Grid -->
+      <div class="grid grid-cols-3 gap-2.5">
+        <!-- Personal Best -->
+        <div class="bg-surface-850 border border-surface-800 rounded-xl p-3">
+          <div class="text-[11px] font-medium text-slate-400 flex items-center gap-1">
+            <span class="text-accent">★</span> Best (PB)
+          </div>
+          <div id="metric-pb" class="font-mono text-base sm:text-lg font-bold text-accent mt-0.5">--</div>
+        </div>
+
+        <!-- Last 5 Average -->
+        <div class="bg-surface-850 border border-surface-800 rounded-xl p-3">
+          <div class="text-[11px] font-medium text-slate-400">Last 5 Avg</div>
+          <div id="metric-avg5" class="font-mono text-base sm:text-lg font-bold text-white mt-0.5">--</div>
+        </div>
+
+        <!-- Overall Average -->
+        <div class="bg-surface-850 border border-surface-800 rounded-xl p-3">
+          <div class="text-[11px] font-medium text-slate-400">All-Time Avg</div>
+          <div id="metric-avg-all" class="font-mono text-base sm:text-lg font-bold text-slate-200 mt-0.5">--</div>
+        </div>
+      </div>
+
+      <!-- Visual Trend Chart -->
+      <div class="bg-surface-850/80 border border-surface-800 rounded-xl p-3.5">
+        <div class="flex items-center justify-between text-[11px] text-slate-400 mb-2">
+          <span>Speed Trend (Lower = Faster)</span>
+          <span id="chart-count-label" class="font-mono text-slate-500">Last 15 runs</span>
+        </div>
+        <div class="h-24 w-full relative flex items-center justify-center" id="trend-chart-container">
+          <p id="chart-empty-msg" class="text-xs text-slate-500 italic">Complete 2+ runs to view your speed curve</p>
+          <svg id="trend-svg" class="w-full h-full hidden overflow-visible" preserveAspectRatio="none"></svg>
+        </div>
+      </div>
+
+      <!-- Inline Clear Confirmation Bar (Replaces confirm() dialogs) -->
+      <div id="clear-confirm-bar" class="hidden bg-danger-dim border border-danger/40 rounded-xl p-3 flex items-center justify-between gap-2 animate-pop">
+        <span class="text-xs text-danger font-medium">Delete all saved runs?</span>
+        <div class="flex items-center gap-1.5">
+          <button id="btn-confirm-clear" type="button" class="px-2.5 py-1 rounded-lg bg-danger text-surface-950 text-xs font-bold hover:opacity-90">
+            Yes, Clear
+          </button>
+          <button id="btn-cancel-clear" type="button" class="px-2.5 py-1 rounded-lg bg-surface-800 text-slate-300 text-xs font-medium hover:bg-surface-700">
+            Cancel
+          </button>
+        </div>
+      </div>
+
+      <!-- Catalogue List Header -->
+      <div class="flex items-center justify-between text-[11px] font-mono uppercase tracking-wider text-slate-500 px-2">
+        <span>Run # / Time</span>
+        <span>Acc / Speed</span>
+      </div>
+
+      <!-- Scrollable Attempt History List -->
+      <div id="history-list" class="flex flex-col gap-2 max-h-[360px] overflow-y-auto pr-1">
+        <!-- Empty State -->
+        <div id="history-empty" class="text-center py-10 px-4 border border-dashed border-surface-800 rounded-xl">
+          <p class="text-sm font-medium text-slate-400">No runs recorded yet</p>
+          <p class="text-xs text-slate-500 mt-1">Type <span class="font-mono text-accent">A</span> through <span class="font-mono text-accent">Z</span> to log your first benchmark!</p>
+        </div>
+      </div>
+
+    </aside>
+
+  </main>
+
+  <!-- Toast Notification Pill (for CSV export or feedback) -->
+  <div id="toast-notification" class="fixed bottom-5 right-5 z-50 pointer-events-none opacity-0 translate-y-2 transition-all duration-200 bg-surface-800 border border-surface-700 text-slate-100 text-xs font-medium px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2">
+    <span class="w-2 h-2 rounded-full bg-accent"></span>
+    <span id="toast-text">Notification</span>
+  </div>
+
+  <script>
+    /**
+     * AZType — A-to-Z Blind Touch-Typing Speed Trainer
+     * Self-contained state, high-precision timer, Web Audio synthesizer, and localStorage catalogue.
+     */
+    (function () {
+      'use strict';
+
+      // --- Constants & Alphabet Setup ---
+      const ALPHABET = 'abcdefghijklmnopqrstuvwxyz'.split('');
+      const STORAGE_KEY = 'aztype_attempt_history_v1';
+      const PREFS_KEY = 'aztype_user_prefs_v1';
+
+      // --- Application State ---
+      const state = {
+        currentIndex: 0,          // 0 = 'a', 25 = 'z', 26 = finished
+        isRunning: false,
+        isFinished: false,
+        startTime: 0,
+        elapsedMs: 0,
+        timerRafId: null,
+        errors: 0,
+        totalKeystrokes: 0,
+        strictMode: false,        // true = resets to 'a' on any wrong key
+        uppercaseDisplay: false,  // visual display preference ('a-z' vs 'A-Z')
+        peekEnabled: true,        // false = hides upcoming letters for true blind practice
+        soundEnabled: false,      // subtle Web Audio clicks
+        history: [],              // array of completed run objects
+      };
+
+      // --- DOM Element References ---
+      const dom = {
+        alphabetGrid: document.getElementById('alphabet-grid'),
+        timerDisplay: document.getElementById('timer-display'),
+        progressBar: document.getElementById('progress-bar'),
+        statusDot: document.getElementById('status-dot'),
+        statusText: document.getElementById('status-text'),
+        statProgress: document.getElementById('stat-progress'),
+        statErrors: document.getElementById('stat-errors'),
+        statLiveCps: document.getElementById('stat-live-cps'),
+        resultBanner: document.getElementById('result-banner'),
+        resultTitle: document.getElementById('result-title'),
+        resultSummary: document.getElementById('result-summary'),
+        pbPill: document.getElementById('pb-pill'),
+        mobileInput: document.getElementById('mobile-typing-input'),
+
+        // Controls
+        btnModeStandard: document.getElementById('btn-mode-standard'),
+        btnModeStrict: document.getElementById('btn-mode-strict'),
+        btnToggleCase: document.getElementById('btn-toggle-case'),
+        caseLabel: document.getElementById('case-label'),
+        btnToggleBlind: document.getElementById('btn-toggle-blind'),
+        btnToggleSound: document.getElementById('btn-toggle-sound'),
+        iconSoundOn: document.getElementById('icon-sound-on'),
+        iconSoundOff: document.getElementById('icon-sound-off'),
+        btnReset: document.getElementById('btn-reset'),
+        btnNextRun: document.getElementById('btn-next-run'),
+
+        // Catalogue / Sidebar
+        metricPb: document.getElementById('metric-pb'),
+        metricAvg5: document.getElementById('metric-avg5'),
+        metricAvgAll: document.getElementById('metric-avg-all'),
+        historyList: document.getElementById('history-list'),
+        historyEmpty: document.getElementById('history-empty'),
+        btnClearHistory: document.getElementById('btn-clear-history'),
+        clearConfirmBar: document.getElementById('clear-confirm-bar'),
+        btnConfirmClear: document.getElementById('btn-confirm-clear'),
+        btnCancelClear: document.getElementById('btn-cancel-clear'),
+        btnExportCsv: document.getElementById('btn-export-csv'),
+        trendSvg: document.getElementById('trend-svg'),
+        chartEmptyMsg: document.getElementById('chart-empty-msg'),
+        chartCountLabel: document.getElementById('chart-count-label'),
+        toast: document.getElementById('toast-notification'),
+        toastText: document.getElementById('toast-text'),
+      };
+
+      // --- Web Audio API Synthesizer (Zero External Assets) ---
+      let audioCtx = null;
+
+      function playTone(type) {
+        if (!state.soundEnabled) return;
+        try {
+          if (!audioCtx) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+          }
+          if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+          }
+
+          const now = audioCtx.currentTime;
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+
+          if (type === 'hit') {
+            // Crisp subtle mechanical tick
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(520 + state.currentIndex * 12, now);
+            osc.frequency.exponentialRampToValueAtTime(180, now + 0.035);
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.04);
+          } else if (type === 'error') {
+            // Low muted thud
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(140, now);
+            osc.frequency.exponentialRampToValueAtTime(75, now + 0.09);
+            gain.gain.setValueAtTime(0.09, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.1);
+          } else if (type === 'complete') {
+            // Pleasant ascending two-note chime
+            const osc2 = audioCtx.createOscillator();
+            const gain2 = audioCtx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(587.33, now); // D5
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(880, now + 0.08); // A5
+            gain2.gain.setValueAtTime(0.12, now + 0.08);
+            gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc2.connect(gain2);
+            gain2.connect(audioCtx.destination);
+
+            osc.start(now);
+            osc.stop(now + 0.26);
+            osc2.start(now + 0.08);
+            osc2.stop(now + 0.41);
+          }
+        } catch (err) {
+          // Silently ignore audio errors if blocked by browser autoplay rules
+        }
+      }
+
+      // --- Toast Notification Helper ---
+      let toastTimeout = null;
+      function showToast(message) {
+        dom.toastText.textContent = message;
+        dom.toast.classList.remove('opacity-0', 'translate-y-2');
+        dom.toast.classList.add('opacity-100', 'translate-y-0');
+        clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => {
+          dom.toast.classList.add('opacity-0', 'translate-y-2');
+          dom.toast.classList.remove('opacity-100', 'translate-y-0');
+        }, 2400);
+      }
+
+      // --- Storage Persistence ---
+      function loadStorage() {
+        try {
+          const savedHistory = localStorage.getItem(STORAGE_KEY);
+          if (savedHistory) {
+            const parsed = JSON.parse(savedHistory);
+            if (Array.isArray(parsed)) {
+              state.history = parsed;
+            }
+          }
+          const savedPrefs = localStorage.getItem(PREFS_KEY);
+          if (savedPrefs) {
+            const prefs = JSON.parse(savedPrefs);
+            state.strictMode = Boolean(prefs.strictMode);
+            state.uppercaseDisplay = Boolean(prefs.uppercaseDisplay);
+            state.peekEnabled = prefs.peekEnabled !== undefined ? Boolean(prefs.peekEnabled) : true;
+            state.soundEnabled = Boolean(prefs.soundEnabled);
+          }
+        } catch (e) {
+          console.warn('Could not read from localStorage:', e);
+        }
+      }
+
+      function saveHistory() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state.history));
+        } catch (e) {
+          console.warn('Could not save history to localStorage:', e);
+        }
+      }
+
+      function savePrefs() {
+        try {
+          localStorage.setItem(
+            PREFS_KEY,
+            JSON.stringify({
+              strictMode: state.strictMode,
+              uppercaseDisplay: state.uppercaseDisplay,
+              peekEnabled: state.peekEnabled,
+              soundEnabled: state.soundEnabled,
+            })
+          );
+        } catch (e) {
+          console.warn('Could not save prefs:', e);
+        }
+      }
+
+      // --- Formatting Helpers ---
+      function formatSeconds(ms, decimals = 2) {
+        const sec = ms / 1000;
+        return sec.toFixed(decimals);
+      }
+
+      function formatTimerHtml(ms) {
+        const totalSec = ms / 1000;
+        const formatted = totalSec < 10 ? '0' + totalSec.toFixed(2) : totalSec.toFixed(2);
+        return `${formatted}<span class="text-2xl sm:text-3xl text-slate-500 font-normal">s</span>`;
+      }
+
+      function formatTimestamp(isoString) {
+        try {
+          const date = new Date(isoString);
+          return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } catch {
+          return '';
+        }
+      }
+
+      // --- Render Alphabet Grid ---
+      function buildAlphabetGrid() {
+        dom.alphabetGrid.innerHTML = '';
+        ALPHABET.forEach((char, idx) => {
+          const tile = document.createElement('div');
+          tile.id = `letter-tile-${idx}`;
+          tile.className =
+            'aspect-square rounded-xl border flex items-center justify-center font-mono text-base sm:text-lg font-bold transition-all duration-100 select-none';
+          dom.alphabetGrid.appendChild(tile);
+        });
+        updateAlphabetVisuals();
+      }
+
+      function updateAlphabetVisuals() {
+        ALPHABET.forEach((char, idx) => {
+          const tile = document.getElementById(`letter-tile-${idx}`);
+          if (!tile) return;
+
+          const displayChar = state.uppercaseDisplay ? char.toUpperCase() : char.toLowerCase();
+
+          // Determine visual state: completed, current, or upcoming
+          if (idx < state.currentIndex) {
+            // Completed letter
+            tile.textContent = displayChar;
+            tile.className =
+              'aspect-square rounded-xl border border-success/40 bg-success-dim text-success flex items-center justify-center font-mono text-base sm:text-lg font-bold transition-all duration-100';
+          } else if (idx === state.currentIndex && !state.isFinished) {
+            // Active target letter
+            tile.textContent = state.peekEnabled || idx === 0 ? displayChar : '?';
+            tile.className =
+              'aspect-square rounded-xl border-2 border-accent bg-accent-dim text-accent flex items-center justify-center font-mono text-lg sm:text-xl font-extrabold scale-105 shadow-md active-letter-ring transition-all duration-100';
+          } else {
+            // Upcoming letter
+            tile.textContent = state.peekEnabled ? displayChar : '•';
+            tile.className =
+              'aspect-square rounded-xl border border-surface-800 bg-surface-850/60 text-slate-500 flex items-center justify-center font-mono text-base sm:text-lg font-medium transition-all duration-100';
+          }
+        });
+
+        // Update progress bar & telemetry counters
+        const pct = (state.currentIndex / ALPHABET.length) * 100;
+        dom.progressBar.style.width = `${pct}%`;
+        dom.statProgress.textContent = `${state.currentIndex}/26`;
+        dom.statErrors.textContent = state.errors;
+        dom.statErrors.className =
+          state.errors > 0 ? 'text-danger font-semibold' : 'text-slate-200 font-semibold';
+      }
+
+      function triggerErrorFlash() {
+        const activeTile = document.getElementById(`letter-tile-${state.currentIndex}`);
+        if (!activeTile) return;
+        activeTile.classList.remove('animate-shake');
+        // Force reflow to restart CSS keyframe animation
+        void activeTile.offsetWidth;
+        activeTile.classList.add('animate-shake', 'border-danger', 'bg-danger-dim', 'text-danger');
+        setTimeout(() => {
+          updateAlphabetVisuals();
+        }, 260);
+      }
+
+      // --- High-Precision Stopwatch Loop ---
+      function updateTimerLoop() {
+        if (!state.isRunning) return;
+        state.elapsedMs = performance.now() - state.startTime;
+        dom.timerDisplay.innerHTML = formatTimerHtml(state.elapsedMs);
+
+        if (state.elapsedMs > 50 && state.currentIndex > 0) {
+          const cps = state.currentIndex / (state.elapsedMs / 1000);
+          dom.statLiveCps.textContent = cps.toFixed(1);
+        }
+
+        state.timerRafId = requestAnimationFrame(updateTimerLoop);
+      }
+
+      function startTimer() {
+        if (state.isRunning) return;
+        state.isRunning = true;
+        state.startTime = performance.now();
+        dom.statusDot.className = 'w-2.5 h-2.5 rounded-full bg-accent animate-pulse';
+        dom.statusText.innerHTML = 'Timer running — keep typing to <span class="font-mono text-accent font-semibold">Z</span>!';
+        dom.timerDisplay.classList.remove('text-success');
+        dom.timerDisplay.classList.add('text-white');
+        state.timerRafId = requestAnimationFrame(updateTimerLoop);
+      }
+
+      function stopTimer() {
+        state.isRunning = false;
+        if (state.timerRafId) {
+          cancelAnimationFrame(state.timerRafId);
+          state.timerRafId = null;
+        }
+        state.elapsedMs = performance.now() - state.startTime;
+        dom.timerDisplay.innerHTML = formatTimerHtml(state.elapsedMs);
+      }
+
+      // --- Run Lifecycle: Reset & Complete ---
+      function resetRun(focusMobile = false) {
+        if (state.timerRafId) {
+          cancelAnimationFrame(state.timerRafId);
+          state.timerRafId = null;
+        }
+        state.currentIndex = 0;
+        state.isRunning = false;
+        state.isFinished = false;
+        state.startTime = 0;
+        state.elapsedMs = 0;
+        state.errors = 0;
+        state.totalKeystrokes = 0;
+
+        dom.timerDisplay.innerHTML = formatTimerHtml(0);
+        dom.timerDisplay.classList.remove('text-success');
+        dom.timerDisplay.classList.add('text-white');
+        dom.statLiveCps.textContent = '0.0';
+
+        const firstChar = state.uppercaseDisplay ? 'A' : 'a';
+        dom.statusDot.className = 'w-2.5 h-2.5 rounded-full bg-slate-500';
+        dom.statusText.innerHTML = `Press <kbd class="px-1.5 py-0.5 text-xs font-mono bg-surface-800 border border-surface-700 rounded text-accent">${firstChar}</kbd> to start timer`;
+
+        dom.resultBanner.classList.add('hidden');
+        dom.mobileInput.value = '';
+        if (focusMobile) {
+          dom.mobileInput.focus();
+        }
+
+        updateAlphabetVisuals();
+      }
+
+      function completeRun() {
+        stopTimer();
+        state.isFinished = true;
+        playTone('complete');
+
+        dom.timerDisplay.classList.remove('text-white');
+        dom.timerDisplay.classList.add('text-success');
+        dom.statusDot.className = 'w-2.5 h-2.5 rounded-full bg-success';
+        dom.statusText.textContent = 'Completed A → Z!';
+
+        const timeSeconds = Number((state.elapsedMs / 1000).toFixed(3));
+        const cps = Number((26 / timeSeconds).toFixed(2));
+        // Standard WPM considers 5 chars = 1 word
+        const wpm = Math.round((26 / 5) / (timeSeconds / 60));
+        const accuracy = Math.max(
+          0,
+          Math.round((26 / Math.max(26, state.totalKeystrokes)) * 100)
+        );
+
+        // Check if this is a new Personal Best
+        const previousBest =
+          state.history.length > 0
+            ? Math.min(...state.history.map((item) => item.timeSeconds))
+            : Infinity;
+        const isNewPb = timeSeconds < previousBest;
+
+        const runRecord = {
+          id: Date.now(),
+          runNumber: state.history.length + 1,
+          timeSeconds,
+          errors: state.errors,
+          accuracy,
+          cps,
+          wpm,
+          mode: state.strictMode ? 'Strict' : 'Standard',
+          timestamp: new Date().toISOString(),
+        };
+
+        state.history.unshift(runRecord);
+        saveHistory();
+        renderCatalogue();
+
+        // Show Result Banner
+        dom.resultTitle.textContent = isNewPb ? 'Incredible! New Record!' : 'Run Complete!';
+        if (isNewPb) {
+          dom.pbPill.classList.remove('hidden');
+        } else {
+          dom.pbPill.classList.add('hidden');
+        }
+        dom.resultSummary.textContent = `Time: ${timeSeconds.toFixed(2)}s • ${cps} chars/sec (${wpm} WPM) • ${accuracy}% acc`;
+        dom.resultBanner.classList.remove('hidden');
+      }
+
+      // --- Core Keystroke Processing ---
+      function processCharacterInput(rawChar) {
+        if (!rawChar || rawChar.length !== 1) return;
+        const char = rawChar.toLowerCase();
+
+        // Ignore non-alphabetic keys during typing
+        if (char < 'a' || char > 'z') return;
+
+        // If already finished, ignore stray letters until user presses Enter/Esc/Reset
+        if (state.isFinished) return;
+
+        const expectedChar = ALPHABET[state.currentIndex];
+        state.totalKeystrokes++;
+
+        // Start timer on the exact millisecond 'a' is pressed
+        if (state.currentIndex === 0 && !state.isRunning) {
+          if (char === 'a') {
+            startTimer();
+          } else {
+            // Wrong starting key before timer begins
+            playTone('error');
+            triggerErrorFlash();
+            return;
+          }
+        }
+
+        if (char === expectedChar) {
+          // Correct letter!
+          state.currentIndex++;
+          updateAlphabetVisuals();
+
+          if (state.currentIndex >= ALPHABET.length) {
+            completeRun();
+          } else {
+            playTone('hit');
+          }
+        } else {
+          // Incorrect letter
+          state.errors++;
+          playTone('error');
+
+          if (state.strictMode) {
+            // Strict mode resets progress back to 'a' immediately
+            showToast(`Strict Mode: Missed '${expectedChar.toUpperCase()}', reset to A!`);
+            resetRun();
+          } else {
+            updateAlphabetVisuals();
+            triggerErrorFlash();
+          }
+        }
+      }
+
+      // --- Catalogue & Trend Chart Rendering ---
+      function renderCatalogue() {
+        const count = state.history.length;
+
+        if (count === 0) {
+          dom.metricPb.textContent = '--';
+          dom.metricAvg5.textContent = '--';
+          dom.metricAvgAll.textContent = '--';
+          dom.historyList.innerHTML = '';
+          dom.historyList.appendChild(dom.historyEmpty);
+          dom.historyEmpty.classList.remove('hidden');
+          renderTrendChart([]);
+          return;
+        }
+
+        dom.historyEmpty.classList.add('hidden');
+
+        // Calculate Metrics
+        const times = state.history.map((r) => r.timeSeconds);
+        const bestTime = Math.min(...times);
+        const avgAll = times.reduce((a, b) => a + b, 0) / times.length;
+        const last5 = times.slice(0, 5);
+        const avg5 = last5.reduce((a, b) => a + b, 0) / last5.length;
+
+        dom.metricPb.textContent = `${bestTime.toFixed(2)}s`;
+        dom.metricAvg5.textContent = `${avg5.toFixed(2)}s`;
+        dom.metricAvgAll.textContent = `${avgAll.toFixed(2)}s`;
+
+        // Render History Items
+        dom.historyList.innerHTML = '';
+        state.history.forEach((run, index) => {
+          const isPb = run.timeSeconds === bestTime;
+          const prevRun = state.history[index + 1];
+          let deltaHtml = '';
+
+          if (prevRun) {
+            const diff = run.timeSeconds - prevRun.timeSeconds;
+            if (diff < -0.005) {
+              deltaHtml = `<span class="text-[11px] font-mono text-success" title="Faster than previous run">▼ ${Math.abs(diff).toFixed(2)}s</span>`;
+            } else if (diff > 0.005) {
+              deltaHtml = `<span class="text-[11px] font-mono text-slate-500" title="Slower than previous run">▲ +${diff.toFixed(2)}s</span>`;
+            }
+          }
+
+          const row = document.createElement('div');
+          row.className = `p-3 rounded-xl border transition-colors flex items-center justify-between gap-2 ${
+            isPb
+              ? 'bg-accent/10 border-accent/40'
+              : 'bg-surface-850/70 border-surface-800 hover:border-surface-700'
+          }`;
+
+          row.innerHTML = `
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="font-mono text-xs text-slate-500 w-7 shrink-0">#${run.runNumber}</span>
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="font-mono text-sm sm:text-base font-bold ${isPb ? 'text-accent' : 'text-white'}">
+                    ${run.timeSeconds.toFixed(2)}s
+                  </span>
+                  ${
+                    isPb
+                      ? '<span class="px-1.5 py-0.5 text-[10px] font-mono font-bold rounded bg-accent text-surface-950">PB</span>'
+                      : ''
+                  }
+                  ${deltaHtml}
+                </div>
+                <div class="text-[11px] text-slate-500 flex items-center gap-2">
+                  <span>${formatTimestamp(run.timestamp)}</span>
+                  <span>•</span>
+                  <span>${run.mode}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="text-right font-mono shrink-0">
+              <div class="text-xs font-semibold ${run.errors === 0 ? 'text-success' : 'text-slate-300'}">
+                ${run.accuracy}% <span class="text-[10px] text-slate-500 font-normal">(${run.errors} err)</span>
+              </div>
+              <div class="text-[11px] text-slate-400">
+                ${run.cps} ch/s
+              </div>
+            </div>
+          `;
+
+          dom.historyList.appendChild(row);
+        });
+
+        // Render SVG Progress Line Chart (chronological order of last 15 runs)
+        const recentChronological = state.history.slice(0, 15).reverse();
+        renderTrendChart(recentChronological);
+      }
+
+      function renderTrendChart(runs) {
+        if (runs.length < 2) {
+          dom.trendSvg.classList.add('hidden');
+          dom.chartEmptyMsg.classList.remove('hidden');
+          dom.chartCountLabel.textContent = `${runs.length}/2 runs`;
+          return;
+        }
+
+        dom.chartEmptyMsg.classList.add('hidden');
+        dom.trendSvg.classList.remove('hidden');
+        dom.chartCountLabel.textContent = `Last ${runs.length} runs`;
+
+        const width = 320;
+        const height = 84;
+        const padX = 10;
+        const padY = 12;
+
+        const times = runs.map((r) => r.timeSeconds);
+        const minTime = Math.min(...times);
+        const maxTime = Math.max(...times);
+        const range = Math.max(0.25, maxTime - minTime);
+
+        const points = runs.map((run, i) => {
+          const x = padX + (i / (runs.length - 1)) * (width - padX * 2);
+          // Lower time = higher up visually (smaller Y)
+          const normalized = (run.timeSeconds - minTime) / range;
+          const y = padY + normalized * (height - padY * 2);
+          return { x, y, time: run.timeSeconds, isPb: run.timeSeconds === minTime };
+        });
+
+        const polylinePoints = points.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+        const areaPoints = `${points[0].x.toFixed(1)},${height} ${polylinePoints} ${points[points.length - 1].x.toFixed(1)},${height}`;
+
+        const circlesHtml = points
+          .map(
+            (p) => `
+            <circle
+              cx="${p.x.toFixed(1)}"
+              cy="${p.y.toFixed(1)}"
+              r="${p.isPb ? 4 : 2.8}"
+              fill="${p.isPb ? '#e2b714' : '#34d399'}"
+              stroke="#11141b"
+              stroke-width="1.5"
+            >
+              <title>${p.time.toFixed(2)}s</title>
+            </circle>`
+          )
+          .join('');
+
+        dom.trendSvg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        dom.trendSvg.innerHTML = `
+          <defs>
+            <linearGradient id="speedGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#e2b714" stop-opacity="0.28" />
+              <stop offset="100%" stop-color="#e2b714" stop-opacity="0.0" />
+            </linearGradient>
+          </defs>
+          <polygon points="${areaPoints}" fill="url(#speedGrad)" />
+          <polyline
+            fill="none"
+            stroke="#e2b714"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            points="${polylinePoints}"
+          />
+          ${circlesHtml}
+        `;
+      }
+
+      // --- UI Preference Controls Sync ---
+      function syncControlUI() {
+        // Mode buttons
+        if (state.strictMode) {
+          dom.btnModeStrict.className =
+            'px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-danger/20 text-danger border border-danger/30 shadow-sm';
+          dom.btnModeStandard.className =
+            'px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all text-slate-400 hover:text-slate-200';
+        } else {
+          dom.btnModeStandard.className =
+            'px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-surface-700 text-white shadow-sm';
+          dom.btnModeStrict.className =
+            'px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all text-slate-400 hover:text-slate-200';
+        }
+
+        // Case label
+        dom.caseLabel.textContent = state.uppercaseDisplay ? 'A-Z' : 'a-z';
+
+        // Blindfold / Peek toggle
+        const peekSpan = dom.btnToggleBlind.querySelector('span');
+        if (state.peekEnabled) {
+          dom.btnToggleBlind.classList.remove('border-accent/50', 'text-accent');
+          if (peekSpan) peekSpan.textContent = 'Peek: On';
+        } else {
+          dom.btnToggleBlind.classList.add('border-accent/50', 'text-accent');
+          if (peekSpan) peekSpan.textContent = 'Peek: Off';
+        }
+
+        // Sound toggle
+        if (state.soundEnabled) {
+          dom.iconSoundOn.classList.remove('hidden');
+          dom.iconSoundOff.classList.add('hidden');
+        } else {
+          dom.iconSoundOn.classList.add('hidden');
+          dom.iconSoundOff.classList.remove('hidden');
+        }
+      }
+
+      // --- Event Listeners ---
+      function bindEvents() {
+        // Global keyboard handler
+        window.addEventListener('keydown', (e) => {
+          // Allow keyboard shortcuts like Ctrl+R / Cmd+R / Ctrl+Shift+I
+          if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+          if (e.key === 'Escape' || e.key === 'Tab') {
+            e.preventDefault();
+            resetRun();
+            return;
+          }
+
+          if (e.key === 'Enter' && state.isFinished) {
+            e.preventDefault();
+            resetRun();
+            return;
+          }
+
+          // Ignore if typing inside mobile input (handled by its own input event)
+          if (document.activeElement === dom.mobileInput) return;
+
+          if (e.key.length === 1) {
+            processCharacterInput(e.key);
+          }
+        });
+
+        // Mobile virtual keyboard fallback input
+        dom.mobileInput.addEventListener('input', (e) => {
+          const val = e.target.value;
+          if (val && val.length > 0) {
+            const lastChar = val.charAt(val.length - 1);
+            processCharacterInput(lastChar);
+          }
+          e.target.value = '';
+        });
+
+        // Mode toggles
+        dom.btnModeStandard.addEventListener('click', () => {
+          state.strictMode = false;
+          savePrefs();
+          syncControlUI();
+          resetRun();
+        });
+
+        dom.btnModeStrict.addEventListener('click', () => {
+          state.strictMode = true;
+          savePrefs();
+          syncControlUI();
+          resetRun();
+        });
+
+        // Case toggle
+        dom.btnToggleCase.addEventListener('click', () => {
+          state.uppercaseDisplay = !state.uppercaseDisplay;
+          savePrefs();
+          syncControlUI();
+          updateAlphabetVisuals();
+          if (!state.isRunning && !state.isFinished) {
+            const firstChar = state.uppercaseDisplay ? 'A' : 'a';
+            dom.statusText.innerHTML = `Press <kbd class="px-1.5 py-0.5 text-xs font-mono bg-surface-800 border border-surface-700 rounded text-accent">${firstChar}</kbd> to start timer`;
+          }
+        });
+
+        // Peek / Blindfold toggle
+        dom.btnToggleBlind.addEventListener('click', () => {
+          state.peekEnabled = !state.peekEnabled;
+          savePrefs();
+          syncControlUI();
+          updateAlphabetVisuals();
+          showToast(
+            state.peekEnabled
+              ? 'Peek enabled: All letters visible'
+              : 'Blindfold mode: Upcoming letters hidden'
+          );
+        });
+
+        // Sound toggle
+        dom.btnToggleSound.addEventListener('click', () => {
+          state.soundEnabled = !state.soundEnabled;
+          savePrefs();
+          syncControlUI();
+          if (state.soundEnabled) {
+            playTone('hit');
+            showToast('Key sound effects enabled');
+          }
+        });
+
+        // Reset buttons
+        dom.btnReset.addEventListener('click', () => resetRun());
+        dom.btnNextRun.addEventListener('click', () => resetRun());
+
+        // Clear History flow (inline confirmation bar)
+        dom.btnClearHistory.addEventListener('click', () => {
+          if (state.history.length === 0) {
+            showToast('History is already empty');
+            return;
+          }
+          dom.clearConfirmBar.classList.remove('hidden');
+        });
+
+        dom.btnCancelClear.addEventListener('click', () => {
+          dom.clearConfirmBar.classList.add('hidden');
+        });
+
+        dom.btnConfirmClear.addEventListener('click', () => {
+          state.history = [];
+          saveHistory();
+          renderCatalogue();
+          dom.clearConfirmBar.classList.add('hidden');
+          showToast('Attempt history cleared');
+        });
+
+        // Export CSV
+        dom.btnExportCsv.addEventListener('click', () => {
+          if (state.history.length === 0) {
+            showToast('No runs to export yet');
+            return;
+          }
+          const headers = ['Run #', 'Time (s)', 'Errors', 'Accuracy (%)', 'Chars/Sec', 'WPM', 'Mode', 'Timestamp'];
+          const rows = state.history.map((r) => [
+            r.runNumber,
+            r.timeSeconds.toFixed(3),
+            r.errors,
+            r.accuracy,
+            r.cps,
+            r.wpm,
+            r.mode,
+            r.timestamp,
+          ]);
+          const csvContent =
+            'data:text/csv;charset=utf-8,' +
+            [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+
+          const encodedUri = encodeURI(csvContent);
+          const link = document.createElement('a');
+          link.setAttribute('href', encodedUri);
+          link.setAttribute('download', `aztype_history_${new Date().toISOString().slice(0, 10)}.csv`);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          showToast('Exported improvement log to CSV');
+        });
+      }
+
+      // --- Initialize Application ---
+      function init() {
+        loadStorage();
+        syncControlUI();
+        buildAlphabetGrid();
+        renderCatalogue();
+        resetRun();
+        bindEvents();
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
